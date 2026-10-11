@@ -208,7 +208,7 @@ Displays the dataset upload interface, quality-analysis options, summary statist
 
 ### Output 2 – Dataset Quality Analysis
 
-![Dataset Quality Analysis](outputs/results.png)
+![Dataset Quality Analysis](outputs/result.png)
 
 Displays dataset statistics, missing-value information, duplicate records, outlier counts, and overall data completeness.
 
