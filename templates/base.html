@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="{% block meta_description %}AI Data Quality Doctor — detect missing values, duplicates, and numeric anomalies using IQR and Isolation Forest. A final-year research workbench.{% endblock %}">
+  <title>{% block title %}AI Data Quality Doctor{% endblock %}</title>
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header>
+    <nav class="nav" aria-label="Main Navigation">
+      <a class="brand" href="{{ url_for('index') }}">
+        <span class="brand-icon">🩺</span>
+        <span>AI Data Quality Doctor</span>
+      </a>
+      <div class="navlinks">
+        {% if session.get('user_id') %}
+          <div class="user-badge" title="Active user session">
+            <span class="user-status-dot"></span>
+            <span>{{ session.get('username') }}</span>
+          </div>
+          <a class="navlink {% if request.path == url_for('index') %}active{% endif %}" href="{{ url_for('index') }}">
+            <span>📊 Dashboard</span>
+          </a>
+          <a class="navlink {% if request.path.startswith(url_for('evaluation')) %}active{% endif %}" href="{{ url_for('evaluation') }}">
+            <span>🔬 Evaluation</span>
+          </a>
+          <a class="navlink navlink-logout" href="{{ url_for('logout') }}">Log out</a>
+        {% else %}
+          <a class="navlink {% if request.path == url_for('login') %}active{% endif %}" href="{{ url_for('login') }}">Log in</a>
+          <a class="button" href="{{ url_for('register') }}">Create account</a>
+        {% endif %}
+      </div>
+    </nav>
+  </header>
+
+  <main class="container" id="main-content">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="flash {{ category }}" role="alert">
+            {% if category == 'success' %}
+              <span>✓</span>
+            {% elif category == 'danger' %}
+              <span>✕</span>
+            {% else %}
+              <span>⚠</span>
+            {% endif %}
+            <span>{{ message }}</span>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer>
+    <div>AI Data Quality Doctor · Final Year Research Workbench · Built with Flask, Pandas &amp; Scikit-Learn</div>
+    <div class="muted small" style="margin-top: 4px;">Student prototype · Upload non-sensitive sample or anonymized datasets only.</div>
+  </footer>
+
+  <!-- Lightweight Drag & Drop Enhancement Script (Vanilla JS, 0 dependencies) -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const dropzone = document.querySelector('.dropzone');
+      const fileInput = document.querySelector('.dropzone input[type="file"]');
+      const preview = document.querySelector('.dropzone-file-preview');
+
+      if (dropzone && fileInput) {
+        ['dragenter', 'dragover'].forEach(name => {
+          dropzone.addEventListener(name, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropzone.classList.add('dragover');
+          });
+        });
+
+        ['dragleave', 'drop'].forEach(name => {
+          dropzone.addEventListener(name, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropzone.classList.remove('dragover');
+          });
+        });
+
+        fileInput.addEventListener('change', function() {
+          if (fileInput.files && fileInput.files[0]) {
+            const file = fileInput.files[0];
+            const sizeKb = (file.size / 1024).toFixed(1);
+            if (preview) {
+              preview.textContent = `📄 Selected: ${file.name} (${sizeKb} KB)`;
+              preview.style.display = 'inline-block';
+            }
+          }
+        });
+      }
+    });
+  </script>
+</body>
+</html>

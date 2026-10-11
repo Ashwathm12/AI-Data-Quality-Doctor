@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · AI Data Quality Doctor{% endblock %}
+{% block content %}
+<section class="hero">
+  <p class="eyebrow">🩺 DATA QUALITY WORKBENCH</p>
+  <h1>Make your dataset more trustworthy.</h1>
+  <p class="hero-copy">Upload a CSV or Excel dataset to detect missing cells, identify duplicate records, and flag numeric outliers using statistical rules or unsupervised machine learning.</p>
+</section>
+
+<!-- Aggregate User Activity Stats (Calculated directly from SQLite history) -->
+{% if total_runs and total_runs > 0 %}
+<section class="grid three" style="margin-bottom: 24px;">
+  <article class="metric card">
+    <span>Datasets Analyzed</span>
+    <strong>{{ total_runs }}</strong>
+    <p class="metric-footnote">Total files examined in your session</p>
+  </article>
+  <article class="metric card">
+    <span>Rows Inspected</span>
+    <strong>{{ "{:,}".format(total_rows_processed) }}</strong>
+    <p class="metric-footnote">Cumulative records scanned</p>
+  </article>
+  <article class="metric card">
+    <span>Outlier Flags Raised</span>
+    <strong>{{ "{:,}".format(total_outliers_flagged) }}</strong>
+    <p class="metric-footnote">Flags preserved for human review</p>
+  </article>
+</section>
+{% endif %}
+
+<!-- Modern Drag & Drop Upload Card -->
+<section class="upload-card card">
+  <div class="card-header">
+    <div>
+      <h2>Analyze a new dataset</h2>
+      <p class="muted">Upload a tabular file for automated profiling, anomaly inspection, and cleaning.</p>
+    </div>
+    <div>
+      <span class="stat-pill success">✓ CSV &amp; Excel Supported</span>
+    </div>
+  </div>
+
+  <form action="{{ url_for('analyze') }}" method="post" enctype="multipart/form-data" class="dropzone-container">
+    <div class="dropzone" id="dataset-dropzone" tabindex="0" role="button" aria-label="Upload dataset dropzone">
+      <input type="file" name="dataset" id="dataset-file-input" accept=".csv,text/csv,.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" required>
+      <div class="dropzone-icon">📁</div>
+      <div class="dropzone-title">Drag and drop your dataset here, or click to browse</div>
+      <div class="dropzone-subtitle">Supports <strong>.csv</strong>, <strong>.xlsx</strong>, and <strong>.xls</strong> · Maximum file size 10 MB</div>
+      <div class="dropzone-file-preview" id="file-preview-pill"></div>
+    </div>
+
+    <div class="upload-controls">
+      <div class="select-group">
+        <label for="outlier_method"><strong>Outlier Detection Algorithm</strong></label>
+        <select name="outlier_method" id="outlier_method">
+          <option value="iqr" selected>IQR Rule (Statistical Tukey Fence)</option>
+          <option value="isolation_forest">Isolation Forest (Unsupervised ML Ensemble)</option>
+        </select>
+      </div>
+      <div>
+        <button type="submit" id="analyze-submit-btn">
+          <span>⚡ Run Quality Diagnosis</span>
+        </button>
+      </div>
+    </div>
+  </form>
+
+  <p class="small">
+    <strong>Transparency Note:</strong> Numeric missing values are filled with the column median, text missing values with the mode, and exact duplicates are removed. Outlier rows are flagged for review and are <em>never automatically deleted</em>.
+  </p>
+</section>
+
+<!-- Feature Explanation Cards -->
+<section class="grid three">
+  <article class="card feature">
+    <div class="feature-icon">◌</div>
+    <h3>Missing Data Detection</h3>
+    <p>Identifies null, empty, and NaN cells by column, calculating overall completeness percentages.</p>
+  </article>
+  <article class="card feature">
+    <div class="feature-icon">≋</div>
+    <h3>Duplicate Row Identification</h3>
+    <p>Finds and quantifies exact duplicate records that can bias statistical distributions and model training.</p>
+  </article>
+  <article class="card feature">
+    <div class="feature-icon">⌁</div>
+    <h3>Unsupervised Outlier Detection</h3>
+    <p>Flags multidimensional or univariate numerical anomalies using Scikit-Learn Isolation Forest or IQR.</p>
+  </article>
+</section>
+
+<!-- Recent Analyses History Section -->
+<section class="card">
+  <div class="card-header">
+    <div>
+      <h2>Recent analyses</h2>
+      <p class="muted">History of datasets diagnosed under your account.</p>
+    </div>
+  </div>
+
+  {% if reports %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Dataset File</th>
+          <th>Rows</th>
+          <th>Columns</th>
+          <th>Missing Cells</th>
+          <th>Duplicates</th>
+          <th>Outlier Rows</th>
+          <th>Analyzed At</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in reports %}
+        <tr>
+          <td><strong>{{ r.filename }}</strong></td>
+          <td>{{ "{:,}".format(r.rows_count) }}</td>
+          <td>{{ r.columns_count }}</td>
+          <td>
+            {% if r.missing_cells > 0 %}
+              <span class="stat-pill warning">{{ r.missing_cells }}</span>
+            {% else %}
+              <span class="stat-pill success">0</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if r.duplicate_rows > 0 %}
+              <span class="stat-pill warning">{{ r.duplicate_rows }}</span>
+            {% else %}
+              <span class="stat-pill success">0</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if r.outlier_rows > 0 %}
+              <span class="stat-pill danger">{{ r.outlier_rows }} flagged</span>
+            {% else %}
+              <span class="stat-pill success">0 flagged</span>
+            {% endif %}
+          </td>
+          <td class="muted">{{ r.created_at }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon">📊</div>
+    <h3>No analyses yet</h3>
+    <p>Upload your first CSV or Excel dataset above to diagnose quality issues and generate a cleaning report.</p>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

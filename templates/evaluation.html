@@ -1,0 +1,422 @@
+{% extends "base.html" %}
+{% block title %}Anomaly Detection Evaluation · AI Data Quality Doctor{% endblock %}
+{% block content %}
+
+<!-- Separation Banner: Clarifying Synthetic Evaluation vs Real-World Uploads -->
+<div class="flash warning" style="margin-bottom: 24px; border-left: 4px solid #f59e0b;">
+  <strong>🔬 Controlled Synthetic Benchmark Sandbox:</strong>
+  This page evaluates algorithm behavior on reproducible synthetic data where ground-truth anomaly labels are known. In the <a href="{{ url_for('index') }}" style="font-weight: 700; text-decoration: underline;">Production CSV Upload Workbench</a>, real-world datasets have unknown ground-truth labels; therefore, detected outliers are flagged for review and are <em>never automatically deleted</em>.
+</div>
+
+<section class="hero">
+  <p class="eyebrow">EMPIRICAL BENCHMARK &amp; VALIDATION</p>
+  <h1>IQR Rule vs. Isolation Forest Benchmark</h1>
+  <p class="hero-copy">
+    Statistically validated multi-trial evaluation measuring Precision, Recall, F1-Score, and Latency across repeated seeds, dataset sizes, and contamination rates.
+  </p>
+</section>
+
+<!-- Experiment Configuration Form Card -->
+<section class="card">
+  <div class="card-header">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+      <div>
+        <h2>Benchmark Configuration &amp; Controls</h2>
+        <p class="muted">Run repeated randomized trials across deterministic seeds to assess algorithm stability.</p>
+      </div>
+      <div>
+        <a class="button secondary" href="{{ url_for('export_evaluation_csv', n_samples=params.n_samples, n_anomalies=params.n_anomalies, random_seed=params.random_seed, n_runs=params.n_runs) }}">
+          📥 Export Benchmark CSV
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <form action="{{ url_for('evaluation') }}" method="post" class="benchmark-form">
+    <div class="form-row">
+      <div class="input-field">
+        <label for="n_samples">Dataset Size (N)</label>
+        <input type="number" id="n_samples" name="n_samples" value="{{ params.n_samples }}" min="20" max="2000" required>
+        <span class="field-hint">20 – 2,000 rows</span>
+      </div>
+      <div class="input-field">
+        <label for="n_anomalies">Injected Anomalies</label>
+        <input type="number" id="n_anomalies" name="n_anomalies" value="{{ params.n_anomalies }}" min="0" max="{{ (params.n_samples * 0.5)|int }}" required>
+        <span class="field-hint">Up to 50% contamination</span>
+      </div>
+      <div class="input-field">
+        <label for="random_seed">Base Random Seed</label>
+        <input type="number" id="random_seed" name="random_seed" value="{{ params.random_seed }}" min="0" max="999999" required>
+        <span class="field-hint">Fixed start seed</span>
+      </div>
+      <div class="input-field">
+        <label for="n_runs">Repeated Trials</label>
+        <input type="number" id="n_runs" name="n_runs" value="{{ params.n_runs }}" min="1" max="10" required>
+        <span class="field-hint">1 – 10 trials</span>
+      </div>
+      <div class="input-field btn-field">
+        <label>&nbsp;</label>
+        <button type="submit">Run Benchmark</button>
+      </div>
+    </div>
+  </form>
+
+  <div class="badge-row">
+    <span class="badge"><strong>Normal Rows:</strong> {{ params.n_normal }}</span>
+    <span class="badge"><strong>Anomalies:</strong> {{ params.n_anomalies }}</span>
+    <span class="badge"><strong>Contamination:</strong> {{ params.anomaly_rate }}%</span>
+    <span class="badge"><strong>Trials:</strong> {{ params.n_runs }} seeds</span>
+    <span class="badge"><strong>Base Seed:</strong> {{ params.random_seed }}</span>
+  </div>
+</section>
+
+<!-- Winner Comparison Banner -->
+{% set iqr_f1 = iqr_summary.f1.mean_pct %}
+{% set iso_f1 = iso_summary.f1.mean_pct %}
+<section class="winner-banner card"
+  style="background: linear-gradient(135deg, #f8faff 0%, #eef2ff 100%); border: 1.5px solid #c7d2fe;">
+  <div class="winner-banner-inner">
+    <div class="winner-banner-left">
+      <p class="eyebrow" style="margin:0 0 6px;">📊 BENCHMARK VERDICT</p>
+      <h2 style="margin: 0 0 6px;">Method Comparison at a Glance</h2>
+      <p class="muted" style="margin: 0; font-size: 13.5px;">Based on mean F1-Score across {{ params.n_runs }} repeated trials.</p>
+    </div>
+    <div class="winner-methods">
+      <div class="winner-method {% if iqr_f1 >= iso_f1 %}winner-highlight{% endif %}">
+        <span class="method-tag tag-iqr" style="font-size: 12px;">IQR Rule</span>
+        <strong class="winner-score">{{ iqr_f1 }}%</strong>
+        <span class="winner-label">F1-Score</span>
+        {% if iqr_f1 > iso_f1 %}<span class="winner-crown">👑 Better F1</span>{% endif %}
+      </div>
+      <div class="winner-vs">vs</div>
+      <div class="winner-method {% if iso_f1 > iqr_f1 %}winner-highlight{% endif %}">
+        <span class="method-tag tag-iso" style="font-size: 12px;">Isolation Forest</span>
+        <strong class="winner-score">{{ iso_f1 }}%</strong>
+        <span class="winner-label">F1-Score</span>
+        {% if iso_f1 > iqr_f1 %}<span class="winner-crown">👑 Better F1</span>{% endif %}
+        {% if iso_f1 == iqr_f1 and iso_f1 > 0 %}<span class="winner-crown">🤝 Tied</span>{% endif %}
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Aggregated Metrics: Mean & Standard Deviation -->
+<section class="grid five-kpi">
+  <article class="metric card">
+    <span>Precision (Mean ± Std)</span>
+    <div class="metric-comparison">
+      <div class="method-val">
+        <span class="method-tag tag-iqr">IQR</span>
+        <strong>{{ iqr_summary.precision.mean_pct }}%</strong>
+      </div>
+      <span class="std-text">± {{ iqr_summary.precision.std_pct }}%</span>
+      <div class="method-val" style="margin-top: 6px;">
+        <span class="method-tag tag-iso">Isolation Forest</span>
+        <strong>{{ iso_summary.precision.mean_pct }}%</strong>
+      </div>
+      <span class="std-text">± {{ iso_summary.precision.std_pct }}%</span>
+    </div>
+    <p class="metric-footnote">Reliability of flagged points (low false alarms)</p>
+  </article>
+
+  <article class="metric card">
+    <span>Recall (Mean ± Std)</span>
+    <div class="metric-comparison">
+      <div class="method-val">
+        <span class="method-tag tag-iqr">IQR</span>
+        <strong>{{ iqr_summary.recall.mean_pct }}%</strong>
+      </div>
+      <span class="std-text">± {{ iqr_summary.recall.std_pct }}%</span>
+      <div class="method-val" style="margin-top: 6px;">
+        <span class="method-tag tag-iso">Isolation Forest</span>
+        <strong>{{ iso_summary.recall.mean_pct }}%</strong>
+      </div>
+      <span class="std-text">± {{ iso_summary.recall.std_pct }}%</span>
+    </div>
+    <p class="metric-footnote">Proportion of injected anomalies caught</p>
+  </article>
+
+  <article class="metric card">
+    <span>F1-Score (Mean ± Std)</span>
+    <div class="metric-comparison">
+      <div class="method-val">
+        <span class="method-tag tag-iqr">IQR</span>
+        <strong>{{ iqr_summary.f1.mean_pct }}%</strong>
+      </div>
+      <span class="std-text">± {{ iqr_summary.f1.std_pct }}%</span>
+      <div class="method-val" style="margin-top: 6px;">
+        <span class="method-tag tag-iso">Isolation Forest</span>
+        <strong>{{ iso_summary.f1.mean_pct }}%</strong>
+      </div>
+      <span class="std-text">± {{ iso_summary.f1.std_pct }}%</span>
+    </div>
+    <p class="metric-footnote">Harmonic mean balancing precision &amp; recall</p>
+  </article>
+
+  <article class="metric card">
+    <span>Accuracy (Mean ± Std)</span>
+    <div class="metric-comparison">
+      <div class="method-val">
+        <span class="method-tag tag-iqr">IQR</span>
+        <strong>{{ iqr_summary.accuracy.mean_pct }}%</strong>
+      </div>
+      <span class="std-text">± {{ iqr_summary.accuracy.std_pct }}%</span>
+      <div class="method-val" style="margin-top: 6px;">
+        <span class="method-tag tag-iso">Isolation Forest</span>
+        <strong>{{ iso_summary.accuracy.mean_pct }}%</strong>
+      </div>
+      <span class="std-text">± {{ iso_summary.accuracy.std_pct }}%</span>
+    </div>
+    <p class="metric-footnote">(TP + TN) / N across all rows</p>
+  </article>
+
+  <article class="metric card">
+    <span>Execution Time (Mean ± Std)</span>
+    <div class="metric-comparison">
+      <div class="method-val">
+        <span class="method-tag tag-iqr">IQR</span>
+        <strong>{{ iqr_summary.exec_time_ms.mean }} ms</strong>
+      </div>
+      <span class="std-text">± {{ iqr_summary.exec_time_ms.std }} ms</span>
+      <div class="method-val" style="margin-top: 6px;">
+        <span class="method-tag tag-iso">Isolation Forest</span>
+        <strong>{{ iso_summary.exec_time_ms.mean }} ms</strong>
+      </div>
+      <span class="std-text">± {{ iso_summary.exec_time_ms.std }} ms</span>
+    </div>
+    <p class="metric-footnote">Inference latency on identical hardware</p>
+  </article>
+</section>
+
+<!-- Summary Statistics Table (Mean & Std) -->
+<section class="card">
+  <h2>Overall Benchmark Summary (Aggregated across {{ params.n_runs }} Seeds)</h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Method</th>
+          <th>Precision (Mean ± Std)</th>
+          <th>Recall (Mean ± Std)</th>
+          <th>F1-Score (Mean ± Std)</th>
+          <th>Accuracy (Mean ± Std)</th>
+          <th>Execution Time (Mean ± Std)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong class="tag-iqr-label">IQR Rule (Statistical)</strong></td>
+          <td><strong>{{ iqr_summary.precision.mean_pct }}%</strong> <span class="muted">(±{{ iqr_summary.precision.std_pct }}%)</span></td>
+          <td><strong>{{ iqr_summary.recall.mean_pct }}%</strong> <span class="muted">(±{{ iqr_summary.recall.std_pct }}%)</span></td>
+          <td><strong>{{ iqr_summary.f1.mean_pct }}%</strong> <span class="muted">(±{{ iqr_summary.f1.std_pct }}%)</span></td>
+          <td>{{ iqr_summary.accuracy.mean_pct }}% <span class="muted">(±{{ iqr_summary.accuracy.std_pct }}%)</span></td>
+          <td><strong>{{ iqr_summary.exec_time_ms.mean }} ms</strong> <span class="muted">(±{{ iqr_summary.exec_time_ms.std }} ms)</span></td>
+        </tr>
+        <tr>
+          <td><strong class="tag-iso-label">Isolation Forest (Unsupervised ML)</strong></td>
+          <td><strong>{{ iso_summary.precision.mean_pct }}%</strong> <span class="muted">(±{{ iso_summary.precision.std_pct }}%)</span></td>
+          <td><strong>{{ iso_summary.recall.mean_pct }}%</strong> <span class="muted">(±{{ iso_summary.recall.std_pct }}%)</span></td>
+          <td><strong>{{ iso_summary.f1.mean_pct }}%</strong> <span class="muted">(±{{ iso_summary.f1.std_pct }}%)</span></td>
+          <td>{{ iso_summary.accuracy.mean_pct }}% <span class="muted">(±{{ iso_summary.accuracy.std_pct }}%)</span></td>
+          <td><strong>{{ iso_summary.exec_time_ms.mean }} ms</strong> <span class="muted">(±{{ iso_summary.exec_time_ms.std }} ms)</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Visual Scaling Charts: Dataset Size and Anomaly Proportion Sweeps -->
+<section class="grid two">
+  <!-- Chart 1: Scaling with Dataset Size -->
+  <article class="card">
+    <div class="chart-header">
+      <div>
+        <h3>Performance vs. Dataset Size (N)</h3>
+        <p class="muted">F1-Score across sample sizes at fixed 10% contamination</p>
+      </div>
+      <div class="chart-legend">
+        <span class="legend-item"><span class="legend-box box-iqr"></span> IQR</span>
+        <span class="legend-item"><span class="legend-box box-iso"></span> IsoForest</span>
+      </div>
+    </div>
+    <div class="chart-container">
+      {% for pt in size_sweep %}
+      <div class="chart-metric-row">
+        <div class="metric-name">{{ pt.size }} rows</div>
+        <div class="chart-bars">
+          <div class="chart-bar-group">
+            <div class="chart-bar bar-iqr" style="width: {{ pt.iqr_f1 }}%;">
+              <span class="bar-label">IQR: {{ pt.iqr_f1 }}%</span>
+            </div>
+          </div>
+          <div class="chart-bar-group">
+            <div class="chart-bar bar-iso" style="width: {{ pt.iso_f1 }}%;">
+              <span class="bar-label">IF: {{ pt.iso_f1 }}%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </article>
+
+  <!-- Chart 2: Scaling with Anomaly Proportion -->
+  <article class="card">
+    <div class="chart-header">
+      <div>
+        <h3>Performance vs. Anomaly Contamination</h3>
+        <p class="muted">F1-Score across contamination proportions at N = 250 rows</p>
+      </div>
+      <div class="chart-legend">
+        <span class="legend-item"><span class="legend-box box-iqr"></span> IQR</span>
+        <span class="legend-item"><span class="legend-box box-iso"></span> IsoForest</span>
+      </div>
+    </div>
+    <div class="chart-container">
+      {% for pt in prop_sweep %}
+      <div class="chart-metric-row">
+        <div class="metric-name">{{ pt.rate_pct }}% rate</div>
+        <div class="chart-bars">
+          <div class="chart-bar-group">
+            <div class="chart-bar bar-iqr" style="width: {{ pt.iqr_f1 }}%;">
+              <span class="bar-label">IQR: {{ pt.iqr_f1 }}%</span>
+            </div>
+          </div>
+          <div class="chart-bar-group">
+            <div class="chart-bar bar-iso" style="width: {{ pt.iso_f1 }}%;">
+              <span class="bar-label">IF: {{ pt.iso_f1 }}%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </article>
+</section>
+
+<!-- Detailed Repeated Trial Runs Breakdown -->
+<section class="card">
+  <h2>Individual Trial Runs Across Seeds</h2>
+  <p class="muted">Detailed confusion matrix values for each deterministic seed trial.</p>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Trial #</th>
+          <th>Seed</th>
+          <th>Method</th>
+          <th>Flagged</th>
+          <th>TP</th>
+          <th>FP</th>
+          <th>TN</th>
+          <th>FN</th>
+          <th>Precision</th>
+          <th>Recall</th>
+          <th>F1-Score</th>
+          <th>Latency</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for run in iqr_runs %}
+        {% set iso_run = iso_runs[loop.index0] %}
+        <tr style="background: #fafbfc;">
+          <td rowspan="2" style="font-weight: 700; border-right: 1px solid var(--line);">Run #{{ run.run_index }}</td>
+          <td rowspan="2" style="font-family: monospace; border-right: 1px solid var(--line);">{{ run.seed }}</td>
+          <td><span class="method-tag tag-iqr">IQR Rule</span></td>
+          <td>{{ run.flagged_count }}</td>
+          <td><span class="stat-pill success">{{ run.tp }}</span></td>
+          <td><span class="stat-pill warning">{{ run.fp }}</span></td>
+          <td>{{ run.tn }}</td>
+          <td><span class="stat-pill danger">{{ run.fn }}</span></td>
+          <td><strong>{{ run.precision_pct }}%</strong></td>
+          <td><strong>{{ run.recall_pct }}%</strong></td>
+          <td><strong>{{ run.f1_pct }}%</strong></td>
+          <td>{{ run.exec_time_ms }} ms</td>
+        </tr>
+        <tr>
+          <td><span class="method-tag tag-iso">Isolation Forest</span></td>
+          <td>{{ iso_run.flagged_count }}</td>
+          <td><span class="stat-pill success">{{ iso_run.tp }}</span></td>
+          <td><span class="stat-pill warning">{{ iso_run.fp }}</span></td>
+          <td>{{ iso_run.tn }}</td>
+          <td><span class="stat-pill danger">{{ iso_run.fn }}</span></td>
+          <td><strong>{{ iso_run.precision_pct }}%</strong></td>
+          <td><strong>{{ iso_run.recall_pct }}%</strong></td>
+          <td><strong>{{ iso_run.f1_pct }}%</strong></td>
+          <td>{{ iso_run.exec_time_ms }} ms</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Synthetic Data Preview Card -->
+<section class="card">
+  <h2>Sample Evaluation Dataset Preview (First 6 Rows of Seed {{ params.random_seed }})</h2>
+  <p class="muted">Generated deterministically. Ground-truth labels are kept separate and never provided to the detection algorithms.</p>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Row</th>
+          <th>feature_1</th>
+          <th>feature_2</th>
+          <th>feature_3</th>
+          <th>Ground Truth Label</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in preview_rows %}
+        <tr>
+          <td>#{{ loop.index }}</td>
+          <td>{{ row.feature_1 }}</td>
+          <td>{{ row.feature_2 }}</td>
+          <td>{{ row.feature_3 }}</td>
+          <td>
+            {% if "Yes" in row.is_anomaly %}
+              <span class="stat-pill danger">{{ row.is_anomaly }}</span>
+            {% else %}
+              <span class="stat-pill success">{{ row.is_anomaly }}</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Scientific Methodology, Documentation & Limitations -->
+<section class="grid two">
+  <article class="card">
+    <h2>Experimental Methodology &amp; Reproducibility</h2>
+    <ul class="recommendations">
+      <li><strong>Identical Test Beds:</strong> In each trial, both IQR and Isolation Forest receive the exact same feature matrix <code>df</code>.</li>
+      <li><strong>Deterministic Seeds:</strong> Trials use a predictable sequence <code>base_seed + run_index * 17</code> to guarantee 100% experimental reproducibility.</li>
+      <li><strong>Configurable Thresholds:</strong>
+        <ul>
+          <li>IQR uses Tukey’s standard \(1.5 \times \text{IQR}\) boundary fence per numeric column.</li>
+          <li>Isolation Forest uses 100 base isolation trees with Scikit-learn’s <code>contamination="auto"</code> heuristic.</li>
+        </ul>
+      </li>
+      <li><strong>Mathematical Consistency:</strong> All confusion matrix partitions satisfy \(TP + FP + TN + FN = N\).</li>
+    </ul>
+  </article>
+
+  <article class="card">
+    <h2>Limitations &amp; Real-World Differences</h2>
+    <ul class="recommendations">
+      <li><strong>Synthetic vs. Real Data:</strong> Synthetic datasets use controlled Gaussian clusters with shifted outliers. Real-world business data frequently contains non-linear correlations, multimodal distributions, and categorical attributes.</li>
+      <li><strong>No Method is Universally Superior:</strong>
+        <ul>
+          <li>IQR is transparent, deterministic, and instantaneous, but treats columns independently (univariate).</li>
+          <li>Isolation Forest captures multi-feature interaction anomalies, but exhibits higher latency and slight stochastic variation.</li>
+        </ul>
+      </li>
+      <li><strong>Non-Destructive Principle:</strong> In production datasets, true labels are unknown. Detected outliers must always be flagged for domain expert review rather than deleted.</li>
+    </ul>
+  </article>
+</section>
+
+{% endblock %}

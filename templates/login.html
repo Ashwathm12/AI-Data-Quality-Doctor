@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Log in · AI Data Quality Doctor{% endblock %}
+{% block content %}
+<div class="auth-layout">
+  <!-- Left: Branding Panel -->
+  <aside class="auth-brand-panel">
+    <div class="auth-brand-inner">
+      <div class="auth-brand-logo">
+        <span class="brand-icon" style="width:56px;height:56px;font-size:30px;border-radius:16px;">🩺</span>
+        <span class="auth-brand-name">AI Data Quality Doctor</span>
+      </div>
+      <h2 class="auth-brand-headline">Diagnose your data.<br>Trust your analysis.</h2>
+      <p class="auth-brand-copy">A final-year research workbench that detects missing values, duplicate records, and numeric anomalies using statistical and unsupervised machine-learning methods.</p>
+      <ul class="auth-feature-list">
+        <li><span class="auth-feature-icon">◌</span><span>Missing-value detection &amp; imputation</span></li>
+        <li><span class="auth-feature-icon">≋</span><span>Duplicate row identification</span></li>
+        <li><span class="auth-feature-icon">⌁</span><span>IQR &amp; Isolation Forest outlier detection</span></li>
+        <li><span class="auth-feature-icon">🔬</span><span>Reproducible algorithm benchmarking</span></li>
+        <li><span class="auth-feature-icon">📥</span><span>Cleaned CSV &amp; JSON report download</span></li>
+      </ul>
+    </div>
+  </aside>
+
+  <!-- Right: Login Form -->
+  <main class="auth-form-panel">
+    <section class="auth card">
+      <p class="eyebrow">🔐 SECURE ACCESS</p>
+      <h1>Welcome back</h1>
+      <p class="muted">Log in to inspect datasets, track anomaly benchmarks, and manage your analysis history.</p>
+
+      <form method="post" action="{{ url_for('login') }}">
+        <div>
+          <label for="username">Username</label>
+          <input id="username" name="username" required minlength="3" autocomplete="username" placeholder="Enter your username">
+        </div>
+
+        <div style="margin-top: 14px;">
+          <label for="password">Password</label>
+          <input id="password" type="password" name="password" required autocomplete="current-password" placeholder="Enter your password">
+        </div>
+
+        <button type="submit" id="login-submit-btn" style="width: 100%; margin-top: 22px;">
+          <span>Log in to Workbench</span>
+        </button>
+      </form>
+
+      <div style="margin-top: 20px; text-align: center; padding-top: 16px; border-top: 1px solid var(--line);">
+        <p class="muted" style="margin: 0; font-size: 13.5px;">
+          Don't have an account yet? <a href="{{ url_for('register') }}" style="font-weight: 700;">Create an account</a>
+        </p>
+      </div>
+    </section>
+  </main>
+</div>
+{% endblock %}

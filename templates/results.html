@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+{% block title %}Analysis results · AI Data Quality Doctor{% endblock %}
+{% block content %}
+<section class="hero compact">
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
+    <div>
+      <p class="eyebrow">✓ ANALYSIS COMPLETE</p>
+      <h1>Quality report</h1>
+      <p class="hero-copy">Inspected dataset: <strong>{{ data.filename }}</strong></p>
+    </div>
+    <div>
+      <a class="button secondary" href="{{ url_for('index') }}">← Back to Dashboard</a>
+    </div>
+  </div>
+</section>
+
+{% set r = data.report %}
+
+<!-- Primary KPI Dimension Cards -->
+<section class="grid four">
+  <article class="metric card">
+    <span>Total Rows</span>
+    <strong>{{ "{:,}".format(r.rows) }}</strong>
+    <p class="metric-footnote">Records in uploaded dataset</p>
+  </article>
+  <article class="metric card">
+    <span>Columns</span>
+    <strong>{{ r.columns }}</strong>
+    <p class="metric-footnote">Features &amp; attributes identified</p>
+  </article>
+  <article class="metric card">
+    <span>Missing Cells</span>
+    <strong>{{ "{:,}".format(r.missing_cells) }}</strong>
+    <p class="metric-footnote">Null / NaN values detected</p>
+  </article>
+  <article class="metric card">
+    <span>Completeness</span>
+    <strong>{{ r.completeness }}%</strong>
+    <p class="metric-footnote">
+      {% if r.completeness >= 95.0 %}
+        <span class="stat-pill success">High completeness</span>
+      {% elif r.completeness >= 80.0 %}
+        <span class="stat-pill warning">Moderate completeness</span>
+      {% else %}
+        <span class="stat-pill danger">Low completeness</span>
+      {% endif %}
+    </p>
+  </article>
+</section>
+
+<!-- Detected Issues & Column Missing Breakdown -->
+<section class="grid two">
+  <article class="card">
+    <div class="card-header">
+      <h2>Detected issues</h2>
+      <span class="badge"><strong>Method:</strong> {{ r.outlier_method }}</span>
+    </div>
+    
+    <div class="issue">
+      <span>Exact duplicate rows</span>
+      <strong>
+        {% if r.duplicate_rows > 0 %}
+          <span class="stat-pill warning">{{ r.duplicate_rows }} found</span>
+        {% else %}
+          <span class="stat-pill success">0 found</span>
+        {% endif %}
+      </strong>
+    </div>
+
+    <div class="issue">
+      <span>Rows with numeric outlier flags</span>
+      <strong>
+        {% if r.outlier_rows > 0 %}
+          <span class="stat-pill danger">{{ r.outlier_rows }} flagged</span>
+        {% else %}
+          <span class="stat-pill success">0 flagged</span>
+        {% endif %}
+      </strong>
+    </div>
+
+    <div class="issue">
+      <span>Duplicate row rate</span>
+      <strong>{{ r.duplicate_rate }}%</strong>
+    </div>
+
+    <div class="small" style="margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--line);">
+      Outlier method: <strong>{{ r.outlier_method }}</strong>. Outlier rows are flagged for human review and are not automatically deleted.
+    </div>
+  </article>
+
+  <article class="card">
+    <div class="card-header">
+      <h2>Missing values by column</h2>
+      <span class="muted small" style="margin: 0;">Missing cell distribution</span>
+    </div>
+
+    {% set has_missing = false %}
+    {% for col, count in r.missing_by_column.items() %}
+      {% if count > 0 %}{% set has_missing = true %}{% endif %}
+      <div class="bar-row">
+        <span title="{{ col }}"><strong>{{ col }}</strong></span>
+        <div class="bar-track">
+          <div class="bar" style="width: {{ (count / r.rows * 100) if r.rows else 0 }}%;"></div>
+        </div>
+        <strong style="text-align: right;">{{ count }}</strong>
+      </div>
+    {% endfor %}
+
+    {% if not has_missing %}
+      <div class="stat-pill success" style="margin-top: 10px;">
+        ✓ Complete dataset: No missing values found in any column.
+      </div>
+    {% endif %}
+  </article>
+</section>
+
+<!-- Suggested Cleaning Actions & Download Options -->
+<section class="card">
+  <h2>Suggested cleaning actions</h2>
+  <p class="muted">The pipeline generates a clean dataset ready for downstream analytics while maintaining data authenticity.</p>
+  
+  <ul class="recommendations">
+    <li><strong>Missing Numeric Values:</strong> Imputed with the column median to protect against extreme distribution shifts.</li>
+    <li><strong>Missing Categorical/Text Values:</strong> Imputed with the column mode (most frequent value), or “Unknown” if empty.</li>
+    <li><strong>Exact Duplicate Rows:</strong> Automatically purged (<strong>{{ data.removed_duplicates }} duplicates removed</strong>, resulting in {{ data.cleaned_rows }} cleaned rows).</li>
+    <li><strong>Flagged Outliers:</strong> Retained for domain specialist review; the prototype does not automatically delete them.</li>
+  </ul>
+
+  <div class="actions">
+    <a class="button" href="{{ url_for('download_cleaned') }}">
+      <span>📥 Download cleaned CSV</span>
+    </a>
+    <a class="button secondary" href="{{ url_for('download_report') }}">
+      <span>📄 Download JSON report</span>
+    </a>
+    <a class="text-link" href="{{ url_for('index') }}">
+      <span>🔄 Analyze another file</span>
+    </a>
+  </div>
+</section>
+
+<!-- Dataset Preview Table (First 8 Rows) -->
+<section class="card">
+  <div class="card-header">
+    <div>
+      <h2>Dataset preview (first 8 rows)</h2>
+      <p class="muted">Sample data extracted from the original uploaded file.</p>
+    </div>
+    <span class="badge">Preview</span>
+  </div>
+
+  {% if r.preview %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 50px;">#</th>
+          {% for col in r.column_names %}
+            <th>{{ col }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in r.preview %}
+        <tr>
+          <td class="muted" style="font-family: var(--font-mono); font-size: 11.5px;">{{ loop.index }}</td>
+          {% for col in r.column_names %}
+            <td>{{ row[col] }}</td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

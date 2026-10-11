@@ -1,0 +1,6 @@
+__pycache__/
+*.py[cod]
+.venv/
+quality_doctor.db
+uploads/
+.env

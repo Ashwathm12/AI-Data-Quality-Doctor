@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Create account · AI Data Quality Doctor{% endblock %}
+{% block content %}
+<div class="auth-layout">
+  <!-- Left: Branding Panel -->
+  <aside class="auth-brand-panel">
+    <div class="auth-brand-inner">
+      <div class="auth-brand-logo">
+        <span class="brand-icon" style="width:56px;height:56px;font-size:30px;border-radius:16px;">🩺</span>
+        <span class="auth-brand-name">AI Data Quality Doctor</span>
+      </div>
+      <h2 class="auth-brand-headline">Your data, diagnosed.<br>Your research, trusted.</h2>
+      <p class="auth-brand-copy">Create a free account to start profiling datasets, running anomaly detection benchmarks, and downloading cleaned data exports.</p>
+      <div class="auth-stats-row">
+        <div class="auth-stat">
+          <strong>2</strong>
+          <span>Detection algorithms</span>
+        </div>
+        <div class="auth-stat">
+          <strong>5+</strong>
+          <span>Quality metrics</span>
+        </div>
+        <div class="auth-stat">
+          <strong>∞</strong>
+          <span>Datasets supported</span>
+        </div>
+      </div>
+      <p class="auth-brand-footnote">Your data never leaves your local machine. This is a student prototype — upload only non-sensitive, anonymized sample data.</p>
+    </div>
+  </aside>
+
+  <!-- Right: Registration Form -->
+  <main class="auth-form-panel">
+    <section class="auth card">
+      <p class="eyebrow">🚀 GET STARTED</p>
+      <h1>Create account</h1>
+      <p class="muted">Your analysis history and anomaly benchmark experiments are securely saved to your local workspace.</p>
+
+      <form method="post" action="{{ url_for('register') }}">
+        <div>
+          <label for="reg-username">Username <span class="muted" style="font-weight: 400;">(minimum 3 characters)</span></label>
+          <input id="reg-username" name="username" required minlength="3" autocomplete="username" placeholder="Choose a username">
+        </div>
+
+        <div style="margin-top: 14px;">
+          <label for="reg-password">Password <span class="muted" style="font-weight: 400;">(minimum 8 characters)</span></label>
+          <input id="reg-password" type="password" name="password" required minlength="8" autocomplete="new-password" placeholder="Create a secure password">
+        </div>
+
+        <button type="submit" id="register-submit-btn" style="width: 100%; margin-top: 22px;">
+          <span>Create My Account</span>
+        </button>
+      </form>
+
+      <div style="margin-top: 20px; text-align: center; padding-top: 16px; border-top: 1px solid var(--line);">
+        <p class="muted" style="margin: 0; font-size: 13.5px;">
+          Already have an account? <a href="{{ url_for('login') }}" style="font-weight: 700;">Log in here</a>
+        </p>
+      </div>
+    </section>
+  </main>
+</div>
+{% endblock %}
