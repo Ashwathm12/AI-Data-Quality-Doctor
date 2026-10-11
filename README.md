@@ -202,7 +202,7 @@ Shows the major stages of the application, from dataset upload and profiling to 
 
 ### Output 1 – Main Dashboard
 
-![Main Dashboard](outputs/dashboard.png)
+![Main Dashboard](outputs/Dashboard.png)
 
 Displays the dataset upload interface, quality-analysis options, summary statistics, and recent analysis history.
 
@@ -212,29 +212,8 @@ Displays the dataset upload interface, quality-analysis options, summary statist
 
 Displays dataset statistics, missing-value information, duplicate records, outlier counts, and overall data completeness.
 
-### Output 3 – Outlier Detection
 
-![Outlier Detection](outputs/outlier-detection.png)
 
-Demonstrates the identification of unusual data points using the IQR statistical method and Isolation Forest machine learning algorithm.
-
-### Output 4 – Data Cleaning and Download
-
-![Data Cleaning Results](outputs/cleaning-results.png)
-
-Shows the cleaning summary, including missing-value imputation, duplicate removal, and options to download the cleaned dataset and quality report.
-
-### Output 5 – Analysis History
-
-![Analysis History](outputs/history.png)
-
-Displays previous dataset analyses associated with the logged-in user.
-
-### Output 6 – Model Evaluation Dashboard
-
-![Model Evaluation Dashboard](outputs/evaluation.png)
-
-Displays the comparison of IQR and Isolation Forest using precision, recall, F1-score, accuracy, execution time, and confusion-matrix results.
 
 ---
 
